@@ -1,135 +1,67 @@
-' ********************************************************************
-' **  Test Roku app
-' ********************************************************************
+' http://www.ssd.noaa.gov/goes/west/wfo/mtr.html
+' http://radar.weather.gov/Conus/pacsouthwest.php
+' http://radar.weather.gov/Conus/RadarImg/latest.gif
 
-' http://sdkdocs.roku.com/display/sdkdoc/Manifest+File
-' splash_screen_hd
-' splash_screen_sd
-' splash_min_time
+Function Timestamp() as String
+  now = CreateObject("roDateTime")
+  return now.GetYear().ToStr() + "-" + now.GetMonth().ToStr() + "-" + now.GetDayOfMonth().ToStr() + " " + now.GetHours().ToStr() + ":" + now.GetMinutes().ToStr() + ":" + now.GetSeconds().ToStr()
+End Function
 
-Sub ShowMessageDialog()
-  port = CreateObject("roMessagePort")
-  dialog = CreateObject("roMessageDialog")
-  dialog.SetMessagePort(port) 
-  dialog.SetTitle("[Message dialog title]")
-  dialog.SetText("[Message dialog text............]")
-  dialog.AddButton(1, "[button text]")
-  dialog.EnableBackButton(true)
-  dialog.Show()
+Sub Main()
+  background_color = &h333333FF
   
-  While True
-    msg = wait(0, dialog.GetMessagePort())
-    if type(msg) = "roMessageDialogEvent"
-      if msg.isButtonPressed()
-        if msg.GetIndex() = 1
-          exit while
-        end if
-      else if msg.isScreenClosed()
-        exit while
-      end if
-    end if
-  end while
-End Sub
-
-Sub RunDemo()
   port = CreateObject("roMessagePort")
-  screen = CreateObject("roScreen", true)
+  screen = CreateObject("roScreen", true)  ' 1280x720 pixels
   screen.SetMessagePort(port)
+  screen.Clear(background_color)
+  screen.SwapBuffers()
   
-  white = &hFFFFFFFF
-  blue = &h0000FFFF
-  registry = CreateObject("roFontRegistry")
-  font = registry.GetDefaultFont()
+  image_path_1 = "tmp:/image_1.gif"
+  transfer1 = CreateObject("roUrlTransfer")
+  transfer1.SetMessagePort(port)
+  transfer1.SetUrl("http://radar.weather.gov/Conus/RadarImg/pacsouthwest.gif")  ' 600x571 pixels
+  transfer1.AsyncGetToFile(image_path_1)
+  identity_1 = transfer1.GetIdentity()
+  bitmap_1 = Invalid
+  
+  image_path_2 = "tmp:/image_2.gif"
+  transfer2 = CreateObject("roUrlTransfer")
+  transfer2.SetMessagePort(port)
+  transfer2.SetUrl("http://sat.wrh.noaa.gov/satellite/1km/Monterey/VIS1MRY.GIF")  ' 680x480 pixels
+  transfer2.AsyncGetToFile(image_path_2)
+  identity_2 = transfer2.GetIdentity()
+  bitmap_2 = Invalid
+  
   While True
-    now = CreateObject("roDateTime")
-    text = Stri(now.GetHours()) + ":" + Stri(now.GetMinutes()) + ":" + Stri(now.GetSeconds())
-    w = font.GetOneLineWidth(text, screen.GetWidth())
-    h = font.GetOneLineHeight()
-    x = 200
-    y = 100
-    border = 8
-    screen.Clear(&h999999FF)
-    screen.DrawRect(x, y, w + 2 * border, h + 2 * border, blue)
-    screen.DrawText(text, x + border, y + border, white, font)
-    screen.SwapBuffers()
-    msg = wait(1000, screen.GetMessagePort())
+    msg = wait(0, screen.GetMessagePort())
     if type(msg) = "roUniversalControlEvent"
       button = msg.GetInt()
       if button = 0  'Back button
         exit while
       end if
-    end if
-  end while
-End Sub
-
-Sub Main()
-  
-  'Initialize theme attributes
-  app = CreateObject("roAppManager")
-  theme = CreateObject("roAssociativeArray")
-  theme.OverhangOffsetSD_X = "72"
-  theme.OverhangOffsetSD_Y = "25"
-  theme.OverhangSliceSD = "pkg:/images/Overhang_BackgroundSlice_Blue_SD43.png"
-  theme.OverhangLogoSD = "pkg:/images/Logo_Overhang_Roku_SDK_SD43.png"
-  theme.OverhangOffsetHD_X = "123"
-  theme.OverhangOffsetHD_Y = "48"
-  theme.OverhangSliceHD = "pkg:/images/Overhang_BackgroundSlice_Blue_HD.png"
-  theme.OverhangLogoHD = "pkg:/images/Logo_Overhang_Roku_SDK_HD.png"
-  app.SetTheme(theme)
-  
-  'Display screen
-  port = CreateObject("roMessagePort")
-  screen = CreateObject("roParagraphScreen")
-  screen.SetMessagePort(port)
-  screen.SetTitle("Title Text")
-  screen.AddHeaderText("Header Text")
-  info = CreateObject("roDeviceInfo")
-  screen.AddParagraph("[" + info.GetModel() + "|" + info.GetDisplayType() + "|" + info.GetDisplayMode() + "|" + info.GetModelDisplayName() + "|" + Stri(info.GetDisplaySize()["w"]) + "x" + Stri(info.GetDisplaySize()["h"]) + "]")
-  screen.AddParagraph("{" + info.GetIPAddrs()["eth1"] + "}")
-  now = CreateObject("roDateTime")
-  screen.AddParagraph(now.AsDateString("long-date") + " " + Stri(now.GetHours()) + ":" + Stri(now.GetMinutes()) + ":" + Stri(now.GetSeconds()))
-  'hostURL = "http://rokudev.roku.com/rokudev/testpatterns/"
-  'graphicURL = hostURL + "1280x720" + "/SMPTE_bars_setup_labels_lg.jpg"
-  'screen.AddGraphic(graphicURL, "scale-to-fit")
-  screen.AddButton(3, "Demo")
-  screen.AddButton(2, "Alert")
-  screen.AddButton(1, "Close")
-  screen.Show()
-  
-  'Event loop
-  transfer = CreateObject("roUrlTransfer")
-  transfer.SetMessagePort(port)
-  transfer.SetUrl("http://www.example.com/")
-  transfer.AsyncGetToString()
-  while true
-    msg = wait(0, screen.GetMessagePort())
-    if type(msg) = "roParagraphScreenEvent"
-      if msg.isButtonPressed()
-        if msg.GetIndex() = 1
-          screen.Close()
-        else if msg.GetIndex() = 2
-          ShowMessageDialog()
-        else if msg.GetIndex() = 3
-          RunDemo()
-        endif
-      else if msg.isScreenClosed()
-        return
-      endif
     else if type(msg) = "roUrlEvent"
       if msg.GetInt() = 1
         if msg.GetResponseCode() = 200
-          headers = msg.GetResponseHeadersArray()
-          for each header in headers
-            for each key in header
-              print "" + key + " = " + header[key]
-            end for
-          end for
-          print msg.GetString()
+          if msg.GetSourceIdentity() = identity_1
+            bitmap_1 = CreateObject("roBitmap", image_path_1)
+            print "Downloaded image 1 (" + Timestamp() + "):" + bitmap_1.GetWidth().ToStr() + "x" + bitmap_1.GetHeight().ToStr()
+          else if msg.GetSourceIdentity() = identity_2
+            bitmap_2 = CreateObject("roBitmap", image_path_2)
+            print "Downloaded image 2 (" + Timestamp() + "):" + bitmap_2.GetWidth().ToStr() + "x" + bitmap_2.GetHeight().ToStr()
+          end if
+          if bitmap_1 <> Invalid AND bitmap_2 <> Invalid
+            screen.Clear(&h333333FF)
+            screen.DrawObject(25, 50, bitmap_1)
+            screen.DrawObject(600, 120, bitmap_2)
+            screen.DrawRect(0, 0, 1280, 120, background_color)
+            screen.DrawRect(0, 600, 1280, 120, background_color)
+            screen.SwapBuffers()
+            print "Updated screen"
+          end if
         else
-          print msg.elseGetFailureReason()
+          print msg.GetFailureReason()
         end if
       end if
-    endif
+    end if
   end while
-  
 End Sub
