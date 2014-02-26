@@ -36,7 +36,7 @@ Sub Main()
     msg = wait(0, screen.GetMessagePort())
     if type(msg) = "roUniversalControlEvent"
       button = msg.GetInt()
-      if button = 0  'Back button
+      if button = 7  'Replay
         exit while
       end if
     else if type(msg) = "roUrlEvent"
